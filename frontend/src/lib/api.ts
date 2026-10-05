@@ -67,6 +67,17 @@ export interface AttendanceItem {
   territory: { id: string; name: string };
   user?: { id: string; fullName: string; phone: string };
 }
+export interface VisitRecordItem {
+  id: string;
+  createdAt: string;
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+  comment?: string | null;
+  photoUrl?: string | null;
+  territory?: { id: string; name: string } | null;
+  user?: { id: string; fullName: string; phone: string };
+}
 export interface AttendanceResult {
   id: string;
   checkInAt: string;
@@ -106,6 +117,17 @@ export const api = {
   }) => post<AttendanceResult>('/attendance/set', b),
   myAttendance: () => request<AttendanceItem[]>('/attendance/my'),
   orgAttendance: () => request<AttendanceItem[]>('/attendance/org'),
+  createRecord: (b: {
+    territoryId?: string;
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    address?: string;
+    comment?: string;
+    photoUrl?: string;
+  }) => post<VisitRecordItem>('/visit-records/create', b),
+  myRecords: () => request<VisitRecordItem[]>('/visit-records/my-records-list'),
+  orgRecords: () => request<VisitRecordItem[]>('/visit-records/org'),
   upload: (file: Blob, name = 'photo.jpg') => {
     const fd = new FormData();
     fd.append('file', file, name);

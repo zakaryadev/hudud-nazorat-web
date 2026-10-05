@@ -34,4 +34,17 @@ export class VisitRecordsService {
       include: { territory: { select: { id: true, name: true } } },
     });
   }
+
+  // ADMIN — tashkilot bo'yicha barcha hisobotlar
+  async orgList(user: JwtUser, limit = 100) {
+    return this.prisma.visitRecord.findMany({
+      where: { user: { orgId: user.orgId } },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 500),
+      include: {
+        territory: { select: { id: true, name: true } },
+        user: { select: { id: true, fullName: true, phone: true } },
+      },
+    });
+  }
 }

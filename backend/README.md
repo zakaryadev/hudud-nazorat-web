@@ -69,6 +69,7 @@ Barcha himoyalangan endpointlar `Authorization: Bearer <token>` talab qiladi.
 |---|---|---|
 | POST | `/api/visit-records/create` | `{ territoryId?, latitude, longitude, address?, photoUrl?, comment? }` |
 | GET | `/api/visit-records/my-records-list` | O'z yozuvlari |
+| GET | `/api/visit-records/org` | ADMIN: tashkilot bo'yicha barcha hisobotlar |
 
 ### Fayllar
 | Metod | Yo'l | Izoh |
