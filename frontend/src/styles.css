@@ -28,3 +28,8 @@ button.link { border:0; background:none; color:var(--brand); padding:4px; }
 .list li { padding:10px 0; border-bottom:1px solid var(--line); } .list li:last-child { border:0; }
 .row { display:flex; justify-content:space-between; gap:8px; align-items:center; }
 .badge { font-size:.75rem; padding:2px 8px; border-radius:999px; } .badge.ok { background:#e6f5ef; color:var(--ok); } .badge.warn { background:#fff3e0; color:var(--warn); }
+.stack { display:flex; flex-direction:column; gap:12px; }
+.map { height:260px; border-radius:8px; border:1px solid var(--line); }
+.checks { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow:auto; }
+.check { flex-direction:row; align-items:center; gap:8px; color:var(--text); font-size:1rem; }
+.tabs button { font-size:.85rem; }

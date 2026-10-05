@@ -1,7 +1,7 @@
 # Hudud nazorat / davomat tizimi
 
 - `backend/` — NestJS + PostgreSQL (Prisma), JWT, GPS geofence (haversine). Batafsil: [backend/README.md](backend/README.md)
-- `frontend/` — React + Vite + TypeScript: login, hudud tanlash, GPS + kamera orqali davomat, tarix, admin uchun tashkilot davomati.
+- `frontend/` — React + Vite + TypeScript: login, hudud tanlash, GPS + kamera orqali davomat, tarix. Admin uchun: tashkilot davomati, xodim qo'shish, hudud yaratish (xaritada nuqta + radius) va xodimlarni biriktirish.
 
 ## Ishga tushirish
 

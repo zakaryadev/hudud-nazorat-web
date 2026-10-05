@@ -3,9 +3,11 @@ import { api, getToken, setToken, setUnauthorizedHandler, User } from './lib/api
 import Login from './pages/Login';
 import CheckIn from './pages/CheckIn';
 import History from './pages/History';
+import Territories from './pages/Territories';
+import Users from './pages/Users';
 import OrgAttendance from './pages/OrgAttendance';
 
-type Tab = 'checkin' | 'history' | 'org';
+type Tab = 'checkin' | 'history' | 'org' | 'territories' | 'users';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -44,13 +46,19 @@ export default function App() {
         {tab === 'checkin' && <CheckIn user={user} />}
         {tab === 'history' && <History />}
         {tab === 'org' && user.role === 'ADMIN' && <OrgAttendance />}
+        {tab === 'territories' && user.role === 'ADMIN' && <Territories />}
+        {tab === 'users' && user.role === 'ADMIN' && <Users />}
       </main>
 
       <nav className="tabs">
         <button className={tab === 'checkin' ? 'active' : ''} onClick={() => setTab('checkin')}>Davomat</button>
         <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Tarix</button>
         {user.role === 'ADMIN' && (
-          <button className={tab === 'org' ? 'active' : ''} onClick={() => setTab('org')}>Tashkilot</button>
+          <>
+            <button className={tab === 'org' ? 'active' : ''} onClick={() => setTab('org')}>Tashkilot</button>
+            <button className={tab === 'territories' ? 'active' : ''} onClick={() => setTab('territories')}>Hududlar</button>
+            <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>Xodimlar</button>
+          </>
         )}
       </nav>
     </div>

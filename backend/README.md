@@ -55,6 +55,7 @@ Barcha himoyalangan endpointlar `Authorization: Bearer <token>` talab qiladi.
 | POST | `/api/territories` | ADMIN | Hudud yaratish `{ name, latitude, longitude, radiusM, assigneeIds[] }` |
 | GET | `/api/territories` | hamma | ADMIN — barchasi, xodim — faqat biriktirilgani |
 | GET | `/api/territories/:id` | hamma | Bitta hudud |
+| PUT | `/api/territories/:id/assignees` | ADMIN | Biriktirilgan xodimlarni almashtirish `{ assigneeIds[] }` |
 
 ### Davomat (geofence yadrosi)
 | Metod | Yo'l | Kim | Izoh |

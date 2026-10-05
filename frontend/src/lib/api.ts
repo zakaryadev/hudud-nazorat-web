@@ -40,6 +40,16 @@ export interface Territory {
   longitude: number;
   radiusM: number;
 }
+export interface AdminTerritory extends Territory {
+  assignees?: { id: string; fullName: string }[];
+}
+export interface OrgUser {
+  id: string;
+  fullName: string;
+  phone: string;
+  role: 'ADMIN' | 'EMPLOYEE';
+  isActive: boolean;
+}
 export interface User {
   id: string;
   fullName: string;
@@ -70,7 +80,23 @@ export const api = {
   login: (phone: string, password: string) =>
     post<{ accessToken: string; user: User }>('/auth/login', { phone, password }),
   me: () => request<User>('/auth/me'),
-  territories: () => request<Territory[]>('/territories'),
+  territories: () => request<AdminTerritory[]>('/territories'),
+  createTerritory: (b: {
+    name: string;
+    address?: string;
+    latitude: number;
+    longitude: number;
+    radiusM: number;
+    assigneeIds: string[];
+  }) => post<AdminTerritory>('/territories', b),
+  setAssignees: (id: string, assigneeIds: string[]) =>
+    request<AdminTerritory>(`/territories/${id}/assignees`, {
+      method: 'PUT',
+      body: JSON.stringify({ assigneeIds }),
+    }),
+  users: () => request<OrgUser[]>('/users'),
+  createUser: (b: { fullName: string; phone: string; password: string; role: 'ADMIN' | 'EMPLOYEE' }) =>
+    post<OrgUser>('/users', b),
   setAttendance: (b: {
     territoryId: string;
     latitude: number;
