@@ -1,0 +1,92 @@
+// Hudud nazorat / davomat tizimi — ma'lumotlar modeli
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  tin       String?  @unique // STIR
+  createdAt DateTime @default(now())
+
+  users       User[]
+  territories Territory[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id])
+  fullName     String
+  phone        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  attendances       Attendance[]
+  visitRecords      VisitRecord[]
+  assignedTerritory Territory[]   @relation("TerritoryAssignees")
+}
+
+model Territory {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  address   String?
+  latitude  Float
+  longitude Float
+  radiusM   Int      @default(150) // geofence radiusi (metr)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  assignees    User[]        @relation("TerritoryAssignees")
+  attendances  Attendance[]
+  visitRecords VisitRecord[]
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+  territoryId String
+  territory   Territory @relation(fields: [territoryId], references: [id])
+  checkInAt   DateTime @default(now())
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  distanceM   Float    // hudud markazigacha masofa
+  withinZone  Boolean  // geofence ichidami?
+  photoUrl    String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, checkInAt])
+}
+
+model VisitRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id])
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  address     String?
+  photoUrl    String?
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
