@@ -1,0 +1,59 @@
+# Production: PostgreSQL + backend (NestJS) + nginx (frontend statik + /api, /uploads proksi)
+# Ishga tushirish:  cp .env.prod.example .env  (to'ldiring)  ->  docker compose -f docker-compose.prod.yml up -d --build
+name: hudud-nazorat
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hudud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD ni .env da bering}
+      POSTGRES_DB: hudud
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hudud -d hudud"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-slim}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hudud:${POSTGRES_PASSWORD}@db:5432/hudud?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET ni .env da bering (kamida 16 belgi)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: "3000"
+      UPLOAD_DIR: /app/uploads
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      TZ: ${TZ:-Asia/Tashkent}
+    volumes:
+      - uploads:/app/uploads
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-80}:80"
+      - "${WEB_TLS_PORT:-443}:443"
+    volumes:
+      # HTTPS uchun .env da NGINX_CONF=nginx.tls.conf
+      - ./deploy/${NGINX_CONF:-nginx.conf}:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+
+volumes:
+  pgdata:
+  uploads:

@@ -1,7 +1,7 @@
 # Hudud nazorat / davomat tizimi
 
 - `backend/` — NestJS + PostgreSQL (Prisma), JWT, GPS geofence (haversine). Batafsil: [backend/README.md](backend/README.md)
-- `frontend/` — React + Vite + TypeScript: login, hudud tanlash, GPS + kamera orqali davomat, tarix. Admin uchun: tashkilot davomati, xodim qo'shish, hudud yaratish (xaritada nuqta + radius) va xodimlarni biriktirish.
+- `frontend/` — React + Vite + TypeScript: login, hudud tanlash, GPS + kamera orqali davomat, tarix. Admin uchun: kunlik kesim paneli, davomat va hisobotlar jurnali (sana/xodim/hudud filtri, CSV eksport), xodim boshqaruvi (qo'shish, nofaol qilish, parol), hudud yaratish/tahrirlash (xaritada nuqta + radius) va xodimlarni biriktirish.
 
 ## Ishga tushirish
 
@@ -17,6 +17,18 @@ cd frontend && npm install && npm run dev
 ```
 
 Backend boshqa manzilda bo'lsa: `VITE_BACKEND=http://host:3000 npm run dev`.
+
+## Production (Docker)
+```bash
+cp .env.prod.example .env       # POSTGRES_PASSWORD, JWT_SECRET ni to'ldiring
+docker compose -f docker-compose.prod.yml up -d --build
+```
+nginx (frontend + `/api`, `/uploads` proksi), HTTPS, birinchi admin, yangilash, **kunlik zaxira va tiklash** — [deploy/README.md](deploy/README.md).
+
+## Testlar
+- `cd backend && npm test` — birlik testlar (jest). CI: `.github/workflows/ci.yml`.
+- `BASE=http://localhost:3000 ./scripts/acceptance.sh` — TZ 14-bo'lim qabul mezonlari bo'yicha API testi (ishlayotgan tizimga qarshi, 34 tekshiruv).
+- Qo'lda: telefon brauzerida GPS/kamera (HTTPS kerak) va zaxiradan tiklash.
 
 ## Eslatma
 - `navigator.geolocation` va kamera faqat **HTTPS** (yoki `localhost`) da ishlaydi. Telefonda sinash/productionda sertifikat kerak (masalan nginx + Let's Encrypt).

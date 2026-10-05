@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, AttendanceItem } from '../lib/api';
 import { daysAgo, ymd } from '../lib/date';
+import { absoluteUrl, downloadCsv } from '../lib/csv';
 import Filters, { Filter } from './Filters';
 
 export function AttendanceList({ items }: { items: AttendanceItem[] | null }) {
@@ -28,6 +29,22 @@ export function AttendanceList({ items }: { items: AttendanceItem[] | null }) {
   );
 }
 
+function exportCsv(items: AttendanceItem[], f: Filter) {
+  downloadCsv(`davomat_${f.from || 'boshi'}_${f.to || 'oxiri'}.csv`, [
+    ['Sana va vaqt', 'Xodim', 'Telefon', 'Hudud', 'Holat', 'Masofa (m)', 'GPS aniqligi (m)', 'Rasm'],
+    ...items.map((a) => [
+      new Date(a.checkInAt).toLocaleString('uz-UZ'),
+      a.user?.fullName,
+      a.user?.phone,
+      a.territory.name,
+      a.withinZone ? 'Ichkarida' : 'Tashqarida',
+      a.distanceM,
+      a.accuracy != null ? Math.round(a.accuracy) : '',
+      absoluteUrl(a.photoUrl),
+    ]),
+  ]);
+}
+
 // Admin: davomat jurnali (sana oralig'i, xodim, hudud bo'yicha filtr)
 export default function OrgAttendance() {
   const [filter, setFilter] = useState<Filter>({ from: daysAgo(6), to: ymd(), userId: '', territoryId: '' });
@@ -42,6 +59,10 @@ export default function OrgAttendance() {
     <div className="card">
       <h2>Davomat jurnali</h2>
       <Filters value={filter} onChange={setFilter} />
+      <div className="row">
+        <span className="muted small">{items ? `${items.length} ta yozuv` : ''}</span>
+        <button disabled={!items?.length} onClick={() => items && exportCsv(items, filter)}>CSV yuklab olish</button>
+      </div>
       {error && <div className="alert err">{error}</div>}
       <AttendanceList items={items} />
     </div>

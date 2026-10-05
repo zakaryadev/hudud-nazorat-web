@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, Territory, User, VisitRecordItem } from '../lib/api';
 import { compressImage, GeoError, getPosition, Position } from '../lib/geo';
 import { daysAgo, ymd } from '../lib/date';
+import { absoluteUrl, downloadCsv } from '../lib/csv';
 import Filters, { Filter } from './Filters';
 import GeoHelp from './GeoHelp';
 
@@ -40,6 +41,29 @@ export function OrgReports() {
     <div className="card">
       <h2>Xodimlar hisobotlari</h2>
       <Filters value={filter} onChange={setFilter} />
+      <div className="row">
+        <span className="muted small">{items ? `${items.length} ta hisobot` : ''}</span>
+        <button
+          disabled={!items?.length}
+          onClick={() =>
+            items &&
+            downloadCsv(`hisobotlar_${filter.from || 'boshi'}_${filter.to || 'oxiri'}.csv`, [
+              ['Sana va vaqt', 'Xodim', 'Telefon', 'Hudud', 'Manzil', 'Izoh', 'Rasm'],
+              ...items.map((r) => [
+                new Date(r.createdAt).toLocaleString('uz-UZ'),
+                r.user?.fullName,
+                r.user?.phone,
+                r.territory?.name,
+                r.address,
+                r.comment,
+                absoluteUrl(r.photoUrl),
+              ]),
+            ])
+          }
+        >
+          CSV yuklab olish
+        </button>
+      </div>
       {error && <div className="alert err">{error}</div>}
       <RecordList items={items} />
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, Daily, DayStatus } from '../lib/api';
 import { ymd } from '../lib/date';
+import { downloadCsv } from '../lib/csv';
 
 const LABEL: Record<DayStatus, string> = { INSIDE: 'Ichkarida', OUTSIDE_ONLY: 'Faqat tashqarida', NONE: 'Belgilamagan' };
 const CLS: Record<DayStatus, string> = { INSIDE: 'ok', OUTSIDE_ONLY: 'warn', NONE: 'err' };
@@ -24,6 +25,27 @@ export default function Dashboard() {
           <h2>Kunlik kesim</h2>
           <input type="date" value={date} max={ymd()} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </div>
+        {data && (
+          <button
+            onClick={() =>
+              downloadCsv(`kunlik_${data.date}.csv`, [
+                ['Xodim', 'Telefon', 'Holat', 'Urinishlar', 'Oxirgi vaqt', 'Oxirgi hudud', 'Masofa (m)', 'Eng yaxshi GPS aniqligi (m)'],
+                ...data.items.map((i) => [
+                  i.user.fullName,
+                  i.user.phone,
+                  LABEL[i.status],
+                  i.attempts,
+                  i.lastAt ? new Date(i.lastAt).toLocaleTimeString('uz-UZ') : '',
+                  i.lastTerritory,
+                  i.lastDistanceM,
+                  i.minAccuracy != null ? Math.round(i.minAccuracy) : '',
+                ]),
+              ])
+            }
+          >
+            CSV yuklab olish
+          </button>
+        )}
         {data && (
           <div className="tiles">
             <div className="tile"><b>{data.summary.total}</b><span>Jami</span></div>
