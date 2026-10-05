@@ -34,3 +34,5 @@ button.link { border:0; background:none; color:var(--brand); padding:4px; }
 .check { flex-direction:row; align-items:center; gap:8px; color:var(--text); font-size:1rem; }
 .tabs button { font-size:.85rem; }
 textarea { font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:8px; resize:vertical; }
+.tabs { overflow-x:auto; }
+.tabs button { flex:1 0 auto; padding:14px 12px; white-space:nowrap; }
