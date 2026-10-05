@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { VisitRecordsService } from './visit-records.service';
 import { CreateVisitRecordDto } from './dto/create-visit-record.dto';
+import { ReportQueryDto } from '../common/dto/report-query.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtUser } from '../common/decorators/current-user.decorator';
@@ -23,7 +24,7 @@ export class VisitRecordsController {
 
   @Roles('ADMIN')
   @Get('org')
-  org(@CurrentUser() u: JwtUser, @Query('limit') limit?: string) {
-    return this.svc.orgList(u, limit ? Number(limit) : 100);
+  org(@CurrentUser() u: JwtUser, @Query() q: ReportQueryDto) {
+    return this.svc.orgList(u, q);
   }
 }

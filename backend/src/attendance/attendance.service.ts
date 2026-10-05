@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TerritoriesService } from '../territories/territories.service';
 import { haversineMeters } from '../common/utils/geo';
 import { SetAttendanceDto } from './dto/set-attendance.dto';
+import { ReportQueryDto, dateFilter } from '../common/dto/report-query.dto';
+import { dayRange, dayStatus, today } from '../common/utils/day';
 import { JwtUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -58,16 +60,74 @@ export class AttendanceService {
     });
   }
 
-  // ADMIN — tashkilot bo'yicha barcha davomat
-  async orgList(user: JwtUser, limit = 100) {
+  // ADMIN — tashkilot bo'yicha davomat (filtrlar: sana oralig'i, xodim, hudud)
+  async orgList(user: JwtUser, q: ReportQueryDto = {}) {
     return this.prisma.attendance.findMany({
-      where: { territory: { orgId: user.orgId } },
+      where: {
+        territory: { orgId: user.orgId },
+        ...(q.userId ? { userId: q.userId } : {}),
+        ...(q.territoryId ? { territoryId: q.territoryId } : {}),
+        ...dateFilter('checkInAt', q.from, q.to),
+      },
       orderBy: { checkInAt: 'desc' },
-      take: Math.min(limit, 500),
+      take: q.limit ?? 200,
       include: {
         territory: { select: { id: true, name: true } },
         user: { select: { id: true, fullName: true, phone: true } },
       },
     });
+  }
+
+  // ADMIN — kunlik kesim: har bir faol xodim uchun holat (FR-7.1)
+  async daily(user: JwtUser, date = today()) {
+    const { start, end } = dayRange(date);
+    const [employees, rows] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { orgId: user.orgId, role: 'EMPLOYEE', isActive: true },
+        orderBy: { fullName: 'asc' },
+        select: { id: true, fullName: true, phone: true },
+      }),
+      this.prisma.attendance.findMany({
+        where: { territory: { orgId: user.orgId }, checkInAt: { gte: start, lt: end } },
+        orderBy: { checkInAt: 'asc' },
+        include: { territory: { select: { name: true } } },
+      }),
+    ]);
+    const items = employees.map((e) => {
+      const mine = rows.filter((r) => r.userId === e.id);
+      const last = mine[mine.length - 1];
+      return {
+        user: e,
+        status: dayStatus(mine),
+        attempts: mine.length,
+        lastAt: last?.checkInAt ?? null,
+        lastTerritory: last?.territory.name ?? null,
+        lastDistanceM: last?.distanceM ?? null,
+        minAccuracy: mine.reduce<number | null>(
+          (m, r) => (r.accuracy == null ? m : m == null ? r.accuracy : Math.min(m, r.accuracy)),
+          null,
+        ),
+      };
+    });
+    return {
+      date,
+      summary: {
+        total: items.length,
+        inside: items.filter((i) => i.status === 'INSIDE').length,
+        outsideOnly: items.filter((i) => i.status === 'OUTSIDE_ONLY').length,
+        none: items.filter((i) => i.status === 'NONE').length,
+      },
+      items,
+    };
+  }
+
+  // Joriy xodimning bugungi holati (bosh ekran)
+  async todayStatus(userId: string) {
+    const { start, end } = dayRange(today());
+    const rows = await this.prisma.attendance.findMany({
+      where: { userId, checkInAt: { gte: start, lt: end } },
+      orderBy: { checkInAt: 'desc' },
+    });
+    return { status: dayStatus(rows), attempts: rows.length, lastAt: rows[0]?.checkInAt ?? null };
   }
 }

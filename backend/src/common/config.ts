@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { config } from './load-env';
 
 config();
+// Kunlik hisobot chegaralari uchun vaqt zonasi
+process.env.TZ = process.env.TZ || 'Asia/Tashkent';
 
 @Module({})
 export class ConfigModuleStub {}

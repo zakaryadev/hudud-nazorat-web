@@ -7,5 +7,6 @@ import { TerritoriesModule } from '../territories/territories.module';
   imports: [TerritoriesModule],
   controllers: [AttendanceController],
   providers: [AttendanceService],
+  exports: [AttendanceService],
 })
 export class AttendanceModule {}

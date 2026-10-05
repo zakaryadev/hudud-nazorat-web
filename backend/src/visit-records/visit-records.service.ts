@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TerritoriesService } from '../territories/territories.service';
 import { CreateVisitRecordDto } from './dto/create-visit-record.dto';
+import { ReportQueryDto, dateFilter } from '../common/dto/report-query.dto';
 import { JwtUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -35,12 +36,17 @@ export class VisitRecordsService {
     });
   }
 
-  // ADMIN — tashkilot bo'yicha barcha hisobotlar
-  async orgList(user: JwtUser, limit = 100) {
+  // ADMIN — tashkilot bo'yicha hisobotlar (filtrlar: sana oralig'i, xodim, hudud)
+  async orgList(user: JwtUser, q: ReportQueryDto = {}) {
     return this.prisma.visitRecord.findMany({
-      where: { user: { orgId: user.orgId } },
+      where: {
+        user: { orgId: user.orgId },
+        ...(q.userId ? { userId: q.userId } : {}),
+        ...(q.territoryId ? { territoryId: q.territoryId } : {}),
+        ...dateFilter('createdAt', q.from, q.to),
+      },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(limit, 500),
+      take: q.limit ?? 200,
       include: {
         territory: { select: { id: true, name: true } },
         user: { select: { id: true, fullName: true, phone: true } },
