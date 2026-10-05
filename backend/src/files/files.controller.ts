@@ -10,6 +10,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AuthGuard } from '@nestjs/passport';
+import { maxUploadBytes } from '../common/config';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('files')
@@ -24,7 +25,7 @@ export class FilesController {
           cb(null, `${unique}${extname(file.originalname) || '.jpg'}`);
         },
       }),
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+      limits: { fileSize: maxUploadBytes() }, // MAX_UPLOAD_MB (standart 10)
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           return cb(new BadRequestException('Faqat rasm yuklash mumkin'), false);

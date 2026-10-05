@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TerritoriesService } from '../territories/territories.service';
 import { haversineMeters } from '../common/utils/geo';
@@ -11,6 +11,9 @@ export class AttendanceService {
 
   async setAttendance(user: JwtUser, dto: SetAttendanceDto) {
     const territory = await this.territories.assertAssigned(user, dto.territoryId);
+    if (!territory.isActive) {
+      throw new BadRequestException('Bu hudud faol emas — davomat qabul qilinmaydi');
+    }
 
     // Geofence tekshiruvi
     const distanceM = haversineMeters(

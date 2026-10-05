@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTerritoryDto } from './dto/create-territory.dto';
+import { UpdateTerritoryDto } from './dto/update-territory.dto';
 import { JwtUser } from '../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -20,6 +21,16 @@ export class TerritoriesService {
     return this.prisma.territory.update({
       where: { id },
       data: { assignees: { set: ids.map((uid) => ({ id: uid })) } },
+      include: { assignees: { select: { id: true, fullName: true } } },
+    });
+  }
+
+  async update(orgId: string, id: string, dto: UpdateTerritoryDto) {
+    const t = await this.prisma.territory.findUnique({ where: { id } });
+    if (!t || t.orgId !== orgId) throw new NotFoundException('Hudud topilmadi');
+    return this.prisma.territory.update({
+      where: { id },
+      data: dto,
       include: { assignees: { select: { id: true, fullName: true } } },
     });
   }
@@ -51,7 +62,7 @@ export class TerritoriesService {
       });
     }
     return this.prisma.territory.findMany({
-      where: { orgId: user.orgId, assignees: { some: { id: user.userId } } },
+      where: { orgId: user.orgId, isActive: true, assignees: { some: { id: user.userId } } },
       orderBy: { name: 'asc' },
     });
   }

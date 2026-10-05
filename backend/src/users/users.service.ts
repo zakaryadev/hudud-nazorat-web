@@ -1,7 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -30,5 +31,23 @@ export class UsersService {
       select: { id: true, fullName: true, phone: true, role: true, isActive: true, createdAt: true },
     });
     return users;
+  }
+
+  async update(orgId: string, actorId: string, id: string, dto: UpdateUserDto) {
+    const u = await this.prisma.user.findUnique({ where: { id } });
+    if (!u || u.orgId !== orgId) throw new NotFoundException('Xodim topilmadi');
+    if (id === actorId && (dto.isActive === false || (dto.role && dto.role !== 'ADMIN'))) {
+      throw new BadRequestException("O'zingizni nofaol qilib yoki rolingizni pasaytirib bo'lmaydi");
+    }
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: {
+        fullName: dto.fullName,
+        isActive: dto.isActive,
+        role: dto.role,
+        passwordHash: dto.password ? await bcrypt.hash(dto.password, 10) : undefined,
+      },
+    });
+    return { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, isActive: user.isActive };
   }
 }

@@ -4,12 +4,13 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { corsOrigin } from './common/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.setGlobalPrefix('api');
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({ origin: corsOrigin(), credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: false }),
   );
