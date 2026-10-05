@@ -1,186 +1,78 @@
-import { useEffect, useRef, useState } from 'react';
-import { api, Territory, User, VisitRecordItem } from '../lib/api';
-import { compressImage, GeoError, getPosition, Position } from '../lib/geo';
-import { daysAgo, ymd } from '../lib/date';
-import { absoluteUrl, downloadCsv } from '../lib/csv';
-import Filters, { Filter } from './Filters';
-import GeoHelp from './GeoHelp';
+import { useEffect, useState } from 'react';
+import { api, Territory, User } from '../lib/api';
+import { compressImage } from '../lib/geo';
+import { useGps, usePhoto } from '../lib/hooks';
+import Icon from '../components/Icon';
+import { GeoHelp, PhotoRow } from '../components/Parts';
+import { Field, SelectField, TextArea, TopBar } from '../components/ui';
+import { useToast } from '../components/Toast';
 
-export function RecordList({ items }: { items: VisitRecordItem[] | null }) {
-  if (!items) return <div className="muted">Yuklanmoqda…</div>;
-  if (!items.length) return <div className="muted">Hozircha hisobot yo‘q</div>;
-  return (
-    <ul className="list">
-      {items.map((r) => (
-        <li key={r.id}>
-          <div className="row">
-            <strong>{r.user ? r.user.fullName : r.territory?.name ?? 'Hisobot'}</strong>
-            <span className="muted small">{new Date(r.createdAt).toLocaleString('uz-UZ')}</span>
-          </div>
-          {(r.user || r.address) && (
-            <div className="muted small">{[r.user && r.territory?.name, r.address].filter(Boolean).join(' · ')}</div>
-          )}
-          {r.comment && <div>{r.comment}</div>}
-          {r.photoUrl && <a className="small" href={r.photoUrl} target="_blank" rel="noreferrer">Rasm</a>}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function OrgReports() {
-  const [filter, setFilter] = useState<Filter>({ from: daysAgo(6), to: ymd(), userId: '', territoryId: '' });
-  const [items, setItems] = useState<VisitRecordItem[] | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    setItems(null);
-    setError('');
-    api.orgRecords(filter).then(setItems).catch((e) => setError(e.message));
-  }, [filter]);
-  return (
-    <div className="card">
-      <h2>Xodimlar hisobotlari</h2>
-      <Filters value={filter} onChange={setFilter} />
-      <div className="row">
-        <span className="muted small">{items ? `${items.length} ta hisobot` : ''}</span>
-        <button
-          disabled={!items?.length}
-          onClick={() =>
-            items &&
-            downloadCsv(`hisobotlar_${filter.from || 'boshi'}_${filter.to || 'oxiri'}.csv`, [
-              ['Sana va vaqt', 'Xodim', 'Telefon', 'Hudud', 'Manzil', 'Izoh', 'Rasm'],
-              ...items.map((r) => [
-                new Date(r.createdAt).toLocaleString('uz-UZ'),
-                r.user?.fullName,
-                r.user?.phone,
-                r.territory?.name,
-                r.address,
-                r.comment,
-                absoluteUrl(r.photoUrl),
-              ]),
-            ])
-          }
-        >
-          CSV yuklab olish
-        </button>
-      </div>
-      {error && <div className="alert err">{error}</div>}
-      <RecordList items={items} />
-    </div>
-  );
-}
-
-export default function Report({ user }: { user: User }) {
+// Tashrif/hisobot yozuvi: hudud (ixtiyoriy), manzil, izoh, GPS va rasm
+export default function Report({ user, onBack, onDone }: { user: User; onBack: () => void; onDone: () => void }) {
+  const toast = useToast();
   const [territories, setTerritories] = useState<Territory[]>(user.territories ?? []);
   const [territoryId, setTerritoryId] = useState('');
-  const [pos, setPos] = useState<Position | null>(null);
   const [address, setAddress] = useState('');
   const [comment, setComment] = useState('');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState('');
-  const [gpsBusy, setGpsBusy] = useState(false);
-  const [geoDenied, setGeoDenied] = useState(false);
-  const uploaded = useRef<{ file: File; url: string } | null>(null);
+  const gps = useGps(true);
+  const photo = usePhoto();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [sent, setSent] = useState(false);
-  const [mine, setMine] = useState<VisitRecordItem[] | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [failed, setFailed] = useState(false);
 
-  const loadMine = () => api.myRecords().then(setMine).catch((e) => setError(e.message));
   useEffect(() => {
-    api.territories().then(setTerritories).catch(() => {});
-    loadMine();
+    api.territories().then((l) => setTerritories(l.filter((t) => t.isActive !== false))).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!photo) return setPreview('');
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
-
-  async function locate() {
-    setGpsBusy(true);
-    setError('');
-    setGeoDenied(false);
-    try {
-      setPos(await getPosition());
-    } catch (e) {
-      setError((e as Error).message);
-      setGeoDenied(e instanceof GeoError && e.denied);
-    } finally {
-      setGpsBusy(false);
-    }
-  }
-
   async function submit() {
-    if (!pos) return;
+    if (!gps.pos) return;
     setBusy(true);
-    setSent(false);
-    setError('');
+    setFailed(false);
     try {
       let photoUrl: string | undefined;
-      if (photo) {
-        if (uploaded.current?.file !== photo) {
-          const blob = await compressImage(photo).catch(() => photo);
-          uploaded.current = { file: photo, url: (await api.upload(blob)).url };
+      if (photo.file) {
+        if (photo.uploaded.current?.file !== photo.file) {
+          const blob = await compressImage(photo.file).catch(() => photo.file!);
+          photo.uploaded.current = { file: photo.file, url: (await api.upload(blob)).url };
         }
-        photoUrl = uploaded.current.url;
+        photoUrl = photo.uploaded.current.url;
       }
       await api.createRecord({
         territoryId: territoryId || undefined,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        accuracy: pos.accuracy,
+        latitude: gps.pos.latitude,
+        longitude: gps.pos.longitude,
+        accuracy: gps.pos.accuracy,
         address: address.trim() || undefined,
         comment: comment.trim() || undefined,
         photoUrl,
       });
-      setSent(true);
-      uploaded.current = null;
-      setPhoto(null); setPos(null); setAddress(''); setComment('');
-      await loadMine();
+      toast('Hisobot yuborildi');
+      onDone();
     } catch (e) {
-      setError((e as Error).message);
+      setFailed(true);
+      toast((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="stack">
-      <div className="card">
-        <h2>Hisobot yuborish</h2>
-        {sent && <div className="alert ok">✓ Hisobot yuborildi</div>}
-        <label>Hudud (ixtiyoriy)
-          <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)}>
-            <option value="">— hududsiz —</option>
-            {territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </label>
-        <label>Manzil (ixtiyoriy)<input value={address} onChange={(e) => setAddress(e.target.value)} /></label>
-        <label>Izoh<textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} /></label>
-
-        <div className="step">
-          <button onClick={locate} disabled={gpsBusy}>{gpsBusy ? 'Aniqlanmoqda…' : pos ? 'GPS ni yangilash' : 'Joylashuvni aniqlash'}</button>
-          {pos && <div className="small">{pos.latitude.toFixed(5)}, {pos.longitude.toFixed(5)} · aniqlik ±{Math.round(pos.accuracy)} m</div>}
+    <>
+      <TopBar title="Hisobot" sub="Tashrif haqida yozuv" onBack={onBack} />
+      <div className="scroll nonav" style={{ paddingTop: 12 }}>
+        <SelectField label="Hudud (ixtiyoriy)" value={territoryId} onChange={setTerritoryId} options={[{ value: '', label: 'Hududsiz' }, ...territories.map((t) => ({ value: t.id, label: t.name }))]} />
+        <Field label="Manzil (ixtiyoriy)" value={address} onChange={setAddress} />
+        <TextArea label="Izoh" value={comment} onChange={setComment} rows={4} />
+        <div className="row">
+          <span className={`gps ${gps.pos ? '' : 'off'}`} style={{ margin: 0, background: 'var(--sc-high)' }}>
+            <i />{gps.busy ? 'Joylashuv aniqlanmoqda…' : gps.pos ? `GPS ±${Math.round(gps.pos.accuracy)} m` : 'Joylashuv aniqlanmadi'}
+          </span>
+          <button className="btn text sl" onClick={gps.locate} disabled={gps.busy}><Icon name="gps" />{gps.pos ? 'Yangilash' : 'Aniqlash'}</button>
         </div>
-        {geoDenied && <GeoHelp />}
-        <div className="step">
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
-          <button onClick={() => fileRef.current?.click()}>{photo ? 'Rasmni almashtirish' : 'Rasmga olish'}</button>
-          {preview && <img className="preview" src={preview} alt="Tanlangan rasm" />}
-        </div>
-
-        {error && <div className="alert err">{error}</div>}
-        <button className="primary" disabled={!pos || busy} onClick={submit}>{busy ? 'Yuborilmoqda…' : error && pos ? 'Qayta urinish' : 'Hisobotni yuborish'}</button>
+        {gps.denied && <GeoHelp />}
+        {gps.error && !gps.denied && <div className="err-text">{gps.error}</div>}
+        <PhotoRow preview={photo.preview} onFile={photo.setFile} />
+        <button className="btn fill big sl" disabled={!gps.pos || busy} onClick={submit}>{busy ? 'Yuborilmoqda…' : failed ? 'Qayta urinish' : 'Yuborish'}</button>
       </div>
-
-      <div className="card">
-        <h2>Mening hisobotlarim</h2>
-        <RecordList items={mine} />
-      </div>
-    </div>
+    </>
   );
 }

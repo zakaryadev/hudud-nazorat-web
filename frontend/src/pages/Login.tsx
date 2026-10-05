@@ -1,5 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { api, setToken, User } from '../lib/api';
+import Icon from '../components/Icon';
+import { Field } from '../components/ui';
 
 export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [phone, setPhone] = useState('+998');
@@ -24,20 +26,20 @@ export default function Login({ onLogin }: { onLogin: (u: User) => void }) {
   }
 
   return (
-    <div className="center">
-      <form className="card login" onSubmit={submit}>
-        <h1>Hudud nazorat</h1>
-        <label>
-          Telefon
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="username" required />
-        </label>
-        <label>
-          Parol
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
-        </label>
-        {error && <div className="alert err">{error}</div>}
-        <button className="primary" disabled={busy}>{busy ? 'Kirilmoqda…' : 'Kirish'}</button>
-      </form>
+    <div className="shell">
+      <div className="login">
+        <div className="logo"><Icon name="pin" /></div>
+        <div>
+          <h1>Hudud nazorat</h1>
+          <p className="muted">Ish joyingizda ekanligingizni tasdiqlang</p>
+        </div>
+        <form onSubmit={submit}>
+          <Field label="Telefon" type="tel" inputMode="tel" autoComplete="username" value={phone} onChange={setPhone} required />
+          <Field label="Parol" type="password" autoComplete="current-password" value={password} onChange={setPassword} required />
+          {error && <div className="err-text" role="alert">{error}</div>}
+          <button className="btn fill big sl" disabled={busy}>{busy ? 'Kirilmoqda…' : 'Kirish'}</button>
+        </form>
+      </div>
     </div>
   );
 }

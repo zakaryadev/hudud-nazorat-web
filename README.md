@@ -18,6 +18,18 @@ cd frontend && npm install && npm run dev
 
 Backend boshqa manzilda bo'lsa: `VITE_BACKEND=http://host:3000 npm run dev`.
 
+## Dizayn va brend rangi
+Interfeys Material 3 uslubida (mobil birinchi, och/qorong'i rejim, PWA: bosh ekranga qo'shish mumkin).
+Butun rang palitrasi **bitta tokendan** hosil bo'ladi: `frontend/brand.json` ichidagi `seed`.
+
+```bash
+cd frontend
+npm run theme -- --seed "#1D4ED8"   # brend rangini almashtirish (brand.json yangilanadi)
+```
+Bu `src/theme.generated.css` (och va qorong'i palitra), `<meta theme-color>`, PWA manifest va ikonkalarni qayta yaratadi
+(`npm run dev` va `npm run build` ham buni avtomatik bajaradi). `variant`: `"tonalSpot"` (standart, yumshoq) yoki `"content"` (brend rangi to'yinganligini saqlaydi).
+Holat ranglari (ichkarida yashil, tashqarida sariq, belgilanmagan qizil) brend rangiga bog'liq emas.
+
 ## Production (Docker)
 ```bash
 cp .env.prod.example .env       # POSTGRES_PASSWORD, JWT_SECRET ni to'ldiring

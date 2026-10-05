@@ -1,160 +1,108 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, AttendanceResult, Territory, User } from '../lib/api';
-import { compressImage, GeoError, getPosition, haversineMeters, Position } from '../lib/geo';
-import GeoHelp from './GeoHelp';
-import MapPicker from './MapPicker';
+import { compressImage, haversineMeters } from '../lib/geo';
+import { useGps, usePhoto } from '../lib/hooks';
+import Icon from '../components/Icon';
+import MapView from '../components/MapView';
+import { GeoHelp, PhotoRow } from '../components/Parts';
+import { SelectField } from '../components/ui';
+import { useToast } from '../components/Toast';
 
-export default function CheckIn({ user }: { user: User }) {
+export default function CheckIn({ user, onBack, onDone }: { user: User; onBack: () => void; onDone: () => void }) {
+  const toast = useToast();
   const [territories, setTerritories] = useState<Territory[]>(user.territories ?? []);
   const [territoryId, setTerritoryId] = useState('');
-  const [pos, setPos] = useState<Position | null>(null);
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState('');
-  const [gpsBusy, setGpsBusy] = useState(false);
-  const [geoDenied, setGeoDenied] = useState(false);
+  const gps = useGps(true); // ekran ochilishi bilan joylashuvni aniqlaymiz
+  const photo = usePhoto();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<AttendanceResult | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  // Yuklangan rasm: yuborish xato bo'lib qayta urinilganda rasm ikkinchi marta yuklanmaydi
-  const uploaded = useRef<{ file: File; url: string } | null>(null);
 
-  // Admin uchun /me da biriktirilgan hududlar bo'lmasligi mumkin — to'liq ro'yxatni olamiz
+  // Admin uchun /me da hududlar bo'lmasligi mumkin — to'liq ro'yxatni olamiz
   useEffect(() => {
-    api.territories().then((l) => setTerritories(l.filter((t) => t.isActive !== false))).catch((e) => setError(e.message));
+    api.territories().then((l) => setTerritories(l.filter((t) => t.isActive !== false))).catch((e) => toast(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   useEffect(() => {
     if (!territoryId && territories.length === 1) setTerritoryId(territories[0].id);
   }, [territories, territoryId]);
 
-  useEffect(() => {
-    if (!photo) return setPreview('');
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
-
   const territory = territories.find((t) => t.id === territoryId);
-  const approxDist =
-    pos && territory ? Math.round(haversineMeters(pos.latitude, pos.longitude, territory.latitude, territory.longitude)) : null;
-
-  async function locate() {
-    setGpsBusy(true);
-    setError('');
-    setGeoDenied(false);
-    try {
-      setPos(await getPosition());
-    } catch (e) {
-      setError((e as Error).message);
-      setGeoDenied(e instanceof GeoError && e.denied);
-    } finally {
-      setGpsBusy(false);
-    }
-  }
+  const { pos } = gps;
+  const dist = useMemo(
+    () => (pos && territory ? Math.round(haversineMeters(pos.latitude, pos.longitude, territory.latitude, territory.longitude)) : null),
+    [pos, territory],
+  );
+  const inside = dist !== null && territory ? dist <= territory.radiusM : null;
 
   async function submit() {
     if (!territory || !pos) return;
     setBusy(true);
-    setError('');
+    setFailed(false);
     try {
       let photoUrl: string | undefined;
-      if (photo) {
-        if (uploaded.current?.file !== photo) {
-          const blob = await compressImage(photo).catch(() => photo);
-          uploaded.current = { file: photo, url: (await api.upload(blob)).url };
+      if (photo.file) {
+        if (photo.uploaded.current?.file !== photo.file) {
+          const blob = await compressImage(photo.file).catch(() => photo.file!);
+          photo.uploaded.current = { file: photo.file, url: (await api.upload(blob)).url };
         }
-        photoUrl = uploaded.current.url;
+        photoUrl = photo.uploaded.current.url;
       }
-      setResult(
-        await api.setAttendance({
-          territoryId: territory.id,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          accuracy: pos.accuracy,
-          photoUrl,
-        }),
-      );
-      setPhoto(null);
-      setPos(null);
-      uploaded.current = null;
+      setResult(await api.setAttendance({ territoryId: territory.id, latitude: pos.latitude, longitude: pos.longitude, accuracy: pos.accuracy, photoUrl }));
+      navigator.vibrate?.(inside ? 30 : [60, 40, 60]);
     } catch (e) {
-      setError((e as Error).message);
+      setFailed(true);
+      toast((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
   if (result) {
+    const ok = result.withinZone;
     return (
-      <div className="card">
-        <div className={`alert ${result.withinZone ? 'ok' : 'warn'}`}>
-          <strong>{result.withinZone ? '✓ Belgilandi' : '⚠ Belgilandi — hudud tashqarisida'}</strong>
-          <div>{result.message}</div>
+      <div className={`success ${ok ? '' : 'warn'}`}>
+        <div className="big">
+          {ok ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : <Icon name="warn" className="" />}
         </div>
-        <p className="muted">
-          {result.territory.name} · masofa {result.distanceM} m · ruxsat {result.territory.radiusM} m
-        </p>
-        <button className="primary" onClick={() => setResult(null)}>Yangi belgilash</button>
+        <h2>{ok ? 'Belgilandi' : 'Belgilandi, lekin hudud tashqarisida'}</h2>
+        <p>{result.territory.name} · hududdan {result.distanceM} m<br />ruxsat etilgan masofa {result.territory.radiusM} m</p>
+        <button className="btn fill big sl" style={{ marginTop: 16 }} onClick={onDone}>Tayyor</button>
       </div>
     );
   }
 
-  if (!territories.length && !error) {
-    return <div className="card muted">Sizga hududlar biriktirilmagan. Administratorga murojaat qiling.</div>;
-  }
-
+  const gpsLine = gps.busy ? 'Joylashuv aniqlanmoqda…' : pos ? `GPS ±${Math.round(pos.accuracy)} m` : 'Joylashuv aniqlanmadi';
   return (
-    <div className="card">
-      <h2>Davomat belgilash</h2>
-
-      <label>
-        Hudud
-        <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)}>
-          <option value="">— tanlang —</option>
-          {territories.map((t) => (
-            <option key={t.id} value={t.id}>{t.name} ({t.radiusM} m)</option>
-          ))}
-        </select>
-      </label>
-      {territory?.address && <div className="muted small">{territory.address}</div>}
-
-      {territory && (
-        <MapPicker
-          value={{ latitude: territory.latitude, longitude: territory.longitude }}
-          radiusM={territory.radiusM}
-          me={pos}
-          height={200}
-        />
-      )}
-
-      <div className="step">
-        <button onClick={locate} disabled={gpsBusy}>{gpsBusy ? 'Aniqlanmoqda…' : pos ? 'GPS ni yangilash' : 'Joylashuvni aniqlash'}</button>
-        {pos && (
-          <div className="small">
-            {pos.latitude.toFixed(5)}, {pos.longitude.toFixed(5)} · aniqlik ±{Math.round(pos.accuracy)} m
-            {pos.accuracy > 100 && <div className="warnText">GPS aniqligi past — ochiq joyga chiqib yangilang</div>}
-            {approxDist !== null && territory && (
-              <div className={approxDist <= territory.radiusM ? 'okText' : 'warnText'}>
-                Hududgacha ≈ {approxDist} m {approxDist <= territory.radiusM ? '(ichkarida)' : '(tashqarida)'}
-              </div>
-            )}
-          </div>
+    <div className="checkin">
+      <div className="mapwrap">
+        <button className="back sl" onClick={onBack} aria-label="Orqaga"><Icon name="back" /></button>
+        <MapView value={territory ? { latitude: territory.latitude, longitude: territory.longitude } : null} radiusM={territory?.radiusM ?? 100} me={pos} height="100%" />
+        {dist !== null && territory && (
+          <span className={`tag float ${inside ? 'ok' : 'warn'}`}>
+            <Icon name={inside ? 'check' : 'warn'} />Hududgacha ≈ {dist} m, {inside ? 'ichkarida' : 'tashqarida'}
+          </span>
         )}
       </div>
-      {geoDenied && <GeoHelp />}
-
-      <div className="step">
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
-        <button onClick={() => fileRef.current?.click()}>{photo ? 'Rasmni almashtirish' : 'Rasmga olish'}</button>
-        {preview && <img className="preview" src={preview} alt="Tanlangan rasm" />}
+      <div className="dock">
+        <div className="handle" />
+        {territories.length > 1 ? (
+          <SelectField label="Hudud" value={territoryId} onChange={setTerritoryId} options={[{ value: '', label: '— tanlang —' }, ...territories.map((t) => ({ value: t.id, label: `${t.name} (${t.radiusM} m)` }))]} />
+        ) : territory ? (
+          <div className="row"><strong>{territory.name}</strong><span className="muted">{territory.radiusM} m</span></div>
+        ) : null}
+        <div className="row">
+          <span className={`gps ${pos ? (pos.accuracy > 100 ? 'bad' : '') : 'off'}`} style={{ margin: 0, background: 'var(--sc-high)' }}><i />{gpsLine}</span>
+          <button className="btn text sl" onClick={gps.locate} disabled={gps.busy}><Icon name="gps" />{pos ? 'Yangilash' : 'Aniqlash'}</button>
+        </div>
+        {pos && pos.accuracy > 100 && <div className="err-text">GPS aniqligi past. Ochiq joyga chiqib yangilang.</div>}
+        {gps.denied && <GeoHelp />}
+        {gps.error && !gps.denied && <div className="err-text">{gps.error}</div>}
+        <PhotoRow preview={photo.preview} onFile={photo.setFile} />
+        <button className="btn fill big sl" disabled={!territory || !pos || busy} onClick={submit}>
+          {busy ? 'Yuborilmoqda…' : failed ? 'Qayta urinish' : 'Belgilash'}
+        </button>
       </div>
-
-      {error && <div className="alert err">{error}</div>}
-
-      <button className="primary big" disabled={!territory || !pos || busy} onClick={submit}>
-        {busy ? 'Yuborilmoqda…' : error && pos ? 'Qayta urinish' : 'Belgilash'}
-      </button>
     </div>
   );
 }

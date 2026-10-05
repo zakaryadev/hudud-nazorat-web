@@ -1,25 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api, AttendanceItem, VisitRecordItem } from '../lib/api';
-import { AttendanceList } from './OrgAttendance';
-import { RecordList } from './Report';
+import { useLoad } from '../lib/hooks';
+import { EmptyState, Fab, Segmented, Skeleton, TopBar } from '../components/ui';
+import { LoadError } from '../components/Parts';
+import { AttendanceGroups, RecordGroups } from '../components/Lists';
+import { AttendanceSheet, RecordSheet } from '../components/Details';
 
-export default function History() {
-  const [kind, setKind] = useState<'att' | 'rec'>('att');
-  const [att, setAtt] = useState<AttendanceItem[] | null>(null);
-  const [rec, setRec] = useState<VisitRecordItem[] | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    api.myAttendance().then(setAtt).catch((e) => setError(e.message));
-    api.myRecords().then(setRec).catch((e) => setError(e.message));
-  }, []);
+export default function History({ kind, setKind, onBack, onNewReport }: { kind: 'att' | 'rec'; setKind: (k: 'att' | 'rec') => void; onBack?: () => void; onNewReport: () => void }) {
+  const att = useLoad(() => api.myAttendance(), []);
+  const rec = useLoad(() => api.myRecords(), []);
+  const [a, setA] = useState<AttendanceItem | null>(null);
+  const [r, setR] = useState<VisitRecordItem | null>(null);
+  const cur = kind === 'att' ? att : rec;
+
   return (
-    <div className="card">
-      <div className="seg">
-        <button className={kind === 'att' ? 'active' : ''} onClick={() => setKind('att')}>Davomat</button>
-        <button className={kind === 'rec' ? 'active' : ''} onClick={() => setKind('rec')}>Hisobotlar</button>
+    <>
+      <TopBar title="Tarix" onBack={onBack} />
+      <div className="scroll">
+        <Segmented value={kind} onChange={setKind} options={[{ value: 'att', label: 'Davomat' }, { value: 'rec', label: 'Hisobotlar' }]} />
+        {cur.loading && !cur.data ? <Skeleton rows={4} /> : cur.error ? <LoadError message={cur.error} onRetry={cur.reload} /> :
+          kind === 'att' ? (
+            att.data?.length ? <AttendanceGroups items={att.data} onOpen={setA} /> : <EmptyState icon="history" title="Hozircha davomat yo‘q" hint="Belgilaganingizdan keyin shu yerda ko‘rinadi" />
+          ) : (
+            rec.data?.length ? <RecordGroups items={rec.data} onOpen={setR} /> : <EmptyState icon="doc" title="Hisobot yo‘q" hint="“+” tugmasi bilan birinchi hisobotni yuboring" />
+          )}
       </div>
-      {error && <div className="alert err">{error}</div>}
-      {kind === 'att' ? <AttendanceList items={att} /> : <RecordList items={rec} />}
-    </div>
+      {kind === 'rec' && <Fab icon="add" label="Hisobot yuborish" onClick={onNewReport} />}
+      <AttendanceSheet item={a} onClose={() => setA(null)} />
+      <RecordSheet item={r} onClose={() => setR(null)} />
+    </>
   );
 }

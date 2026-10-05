@@ -1,0 +1,89 @@
+/* Avtomatik yaratilgan: npm run theme (seed #006A6A). Qo'lda tahrirlamang — brand.json ni o'zgartiring. */
+:root {
+  --primary: #006a6a;
+  --on-primary: #ffffff;
+  --primary-container: #9cf1f0;
+  --on-primary-container: #004f4f;
+  --secondary-container: #cce8e7;
+  --on-secondary-container: #324b4b;
+  --surface: #f4fbfa;
+  --sc-low: #eff5f4;
+  --sc: #e9efee;
+  --sc-high: #e3e9e9;
+  --sc-highest: #dde4e3;
+  --on-surface: #161d1d;
+  --on-surface-variant: #3f4948;
+  --outline: #6f7979;
+  --outline-variant: #bec9c8;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --inverse-surface: #2b3231;
+  --inverse-on-surface: #ecf2f1;
+  --ok: #1b6e2d;
+  --ok-container: #c4efc8;
+  --on-ok-container: #00210a;
+  --warn: #8a5100;
+  --warn-container: #ffddb5;
+  --on-warn-container: #2c1600;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #80d5d4;
+    --on-primary: #003737;
+    --primary-container: #004f4f;
+    --on-primary-container: #9cf1f0;
+    --secondary-container: #324b4b;
+    --on-secondary-container: #cce8e7;
+    --surface: #0e1514;
+    --sc-low: #161d1d;
+    --sc: #1a2121;
+    --sc-high: #252b2b;
+    --sc-highest: #2f3636;
+    --on-surface: #dde4e3;
+    --on-surface-variant: #bec9c8;
+    --outline: #889392;
+    --outline-variant: #3f4948;
+    --error: #ffb4ab;
+    --error-container: #93000a;
+    --on-error-container: #ffdad6;
+    --inverse-surface: #dde4e3;
+    --inverse-on-surface: #2b3231;
+    --ok: #8bd88f;
+    --ok-container: #0d3a18;
+    --on-ok-container: #c4efc8;
+    --warn: #ffb95c;
+    --warn-container: #4a2d00;
+    --on-warn-container: #ffddb5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --primary: #80d5d4;
+  --on-primary: #003737;
+  --primary-container: #004f4f;
+  --on-primary-container: #9cf1f0;
+  --secondary-container: #324b4b;
+  --on-secondary-container: #cce8e7;
+  --surface: #0e1514;
+  --sc-low: #161d1d;
+  --sc: #1a2121;
+  --sc-high: #252b2b;
+  --sc-highest: #2f3636;
+  --on-surface: #dde4e3;
+  --on-surface-variant: #bec9c8;
+  --outline: #889392;
+  --outline-variant: #3f4948;
+  --error: #ffb4ab;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --inverse-surface: #dde4e3;
+  --inverse-on-surface: #2b3231;
+  --ok: #8bd88f;
+  --ok-container: #0d3a18;
+  --on-ok-container: #c4efc8;
+  --warn: #ffb95c;
+  --warn-container: #4a2d00;
+  --on-warn-container: #ffddb5;
+  color-scheme: dark;
+}

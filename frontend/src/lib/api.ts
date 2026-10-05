@@ -140,7 +140,7 @@ export const api = {
     }),
   updateTerritory: (
     id: string,
-    b: { name?: string; address?: string; radiusM?: number; isActive?: boolean },
+    b: { name?: string; address?: string; latitude?: number; longitude?: number; radiusM?: number; isActive?: boolean },
   ) => request<AdminTerritory>(`/territories/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
   updateUser: (id: string, b: { isActive?: boolean; password?: string; fullName?: string }) =>
     request<OrgUser>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(b) }),
