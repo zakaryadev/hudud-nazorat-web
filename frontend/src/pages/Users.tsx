@@ -1,14 +1,28 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, OrgUser } from '../lib/api';
 
-export default function Users() {
+export default function Users({ meId }: { meId: string }) {
   const [users, setUsers] = useState<OrgUser[] | null>(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ fullName: '', phone: '+998', password: '', role: 'EMPLOYEE' as 'ADMIN' | 'EMPLOYEE' });
   const [busy, setBusy] = useState(false);
+  const [pwFor, setPwFor] = useState<string | null>(null);
+  const [pw, setPw] = useState('');
 
   const load = () => api.users().then(setUsers).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
+
+  async function act(id: string, body: { isActive?: boolean; password?: string }) {
+    setError('');
+    try {
+      await api.updateUser(id, body);
+      setPwFor(null);
+      setPw('');
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -50,6 +64,18 @@ export default function Users() {
               <li key={u.id}>
                 <div className="row"><strong>{u.fullName}</strong><span className="badge">{u.role === 'ADMIN' ? 'Admin' : 'Xodim'}</span></div>
                 <div className="muted small">{u.phone}{!u.isActive && ' · nofaol'}</div>
+                {u.id !== meId && (
+                  <div className="row left">
+                    <button className="link" onClick={() => act(u.id, { isActive: !u.isActive })}>{u.isActive ? 'Nofaol qilish' : 'Faollashtirish'}</button>
+                    <button className="link" onClick={() => { setPwFor(pwFor === u.id ? null : u.id); setPw(''); }}>Parolni o‘zgartirish</button>
+                  </div>
+                )}
+                {pwFor === u.id && (
+                  <div className="row left">
+                    <input type="text" placeholder="Yangi parol (kamida 4)" minLength={4} value={pw} onChange={(e) => setPw(e.target.value)} />
+                    <button className="primary" disabled={pw.length < 4} onClick={() => act(u.id, { password: pw })}>Saqlash</button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

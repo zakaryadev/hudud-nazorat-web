@@ -4,9 +4,15 @@ export interface Position {
   accuracy: number;
 }
 
+export class GeoError extends Error {
+  constructor(message: string, public denied = false) {
+    super(message);
+  }
+}
+
 export function getPosition(): Promise<Position> {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("Brauzer GPS'ni qo'llamaydi"));
+    if (!navigator.geolocation) return reject(new GeoError("Brauzer GPS'ni qo'llamaydi"));
     navigator.geolocation.getCurrentPosition(
       (p) =>
         resolve({
@@ -16,12 +22,13 @@ export function getPosition(): Promise<Position> {
         }),
       (e) =>
         reject(
-          new Error(
+          new GeoError(
             e.code === e.PERMISSION_DENIED
-              ? "GPS ruxsati berilmagan. Brauzer sozlamalarida joylashuvga ruxsat bering."
+              ? 'GPS ruxsati berilmagan.'
               : e.code === e.TIMEOUT
                 ? 'GPS javob bermadi, qayta urinib ko‘ring.'
                 : 'Joylashuvni aniqlab bo‘lmadi.',
+            e.code === e.PERMISSION_DENIED,
           ),
         ),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },

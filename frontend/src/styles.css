@@ -36,3 +36,17 @@ button.link { border:0; background:none; color:var(--brand); padding:4px; }
 textarea { font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:8px; resize:vertical; }
 .tabs { overflow-x:auto; }
 .tabs button { flex:1 0 auto; padding:14px 12px; white-space:nowrap; }
+.who { border:0; background:none; padding:0; text-align:left; color:inherit; cursor:pointer; }
+button.big { padding:14px; font-size:1.05rem; }
+.filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.filters label { font-size:.8rem; } .filters input,.filters select { padding:8px; width:100%; }
+.tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.tile { background:var(--bg); border-radius:8px; padding:8px 4px; text-align:center; display:flex; flex-direction:column; }
+.tile b { font-size:1.4rem; } .tile span { font-size:.7rem; color:var(--muted); }
+.tile.ok b { color:var(--ok); } .tile.warn b { color:var(--warn); } .tile.err b { color:var(--err); }
+.badge.err { background:#fdecea; color:var(--err); }
+.row.left { justify-content:flex-start; flex-wrap:wrap; }
+.seg { display:flex; gap:0; } .seg button { flex:1; border-radius:0; } .seg button:first-child { border-radius:8px 0 0 8px; } .seg button:last-child { border-radius:0 8px 8px 0; }
+.seg button.active { background:var(--brand); border-color:var(--brand); color:#fff; }
+.dl { display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; } .dl dt { color:var(--muted); } .dl dd { margin:0; }
+.alert ol { margin:6px 0 0; padding-left:18px; }

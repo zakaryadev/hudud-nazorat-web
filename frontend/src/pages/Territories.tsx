@@ -15,6 +15,8 @@ export default function Territories() {
   const [assignees, setAssignees] = useState<string[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [editIds, setEditIds] = useState<string[]>([]);
+  const [editing2, setEditing2] = useState<string | null>(null); // hudud ma'lumotlarini tahrirlash
+  const [draft, setDraft] = useState({ name: '', address: '', radiusM: 150, isActive: true });
 
   const employees = users.filter((u) => u.isActive);
   const load = () => api.territories().then(setList).catch((e) => setError(e.message));
@@ -53,6 +55,22 @@ export default function Territories() {
     try {
       await api.setAssignees(id, editIds);
       setEditing(null);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function saveTerritory(id: string) {
+    setError('');
+    try {
+      await api.updateTerritory(id, {
+        name: draft.name.trim(),
+        address: draft.address.trim(),
+        radiusM: draft.radiusM,
+        isActive: draft.isActive,
+      });
+      setEditing2(null);
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -98,8 +116,28 @@ export default function Territories() {
           <ul className="list">
             {list.map((t) => (
               <li key={t.id}>
-                <div className="row"><strong>{t.name}</strong><span className="badge">{t.radiusM} m</span></div>
+                <div className="row">
+                  <strong>{t.name}{t.isActive === false && <span className="badge err"> faol emas</span>}</strong>
+                  <span className="badge">{t.radiusM} m</span>
+                </div>
                 {t.address && <div className="muted small">{t.address}</div>}
+                {editing2 === t.id && (
+                  <div className="stack">
+                    <label>Nomi<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+                    <label>Manzil<input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} /></label>
+                    <label>Radius: {draft.radiusM} m
+                      <input type="range" min={20} max={1000} step={10} value={draft.radiusM} onChange={(e) => setDraft({ ...draft, radiusM: Number(e.target.value) })} />
+                    </label>
+                    <label className="check"><input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} />Faol (yangi davomat qabul qilinadi)</label>
+                    <div className="row">
+                      <button className="primary" onClick={() => saveTerritory(t.id)}>Saqlash</button>
+                      <button onClick={() => setEditing2(null)}>Bekor</button>
+                    </div>
+                  </div>
+                )}
+                {editing2 !== t.id && (
+                  <button className="link" onClick={() => { setEditing2(t.id); setDraft({ name: t.name, address: t.address ?? '', radiusM: t.radiusM, isActive: t.isActive !== false }); }}>Tahrirlash</button>
+                )}
                 <div className="small">
                   {t.assignees?.length ? t.assignees.map((a) => a.fullName).join(', ') : <span className="muted">Xodim biriktirilmagan</span>}
                 </div>

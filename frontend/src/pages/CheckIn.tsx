@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, AttendanceResult, Territory, User } from '../lib/api';
-import { compressImage, getPosition, haversineMeters, Position } from '../lib/geo';
+import { compressImage, GeoError, getPosition, haversineMeters, Position } from '../lib/geo';
+import GeoHelp from './GeoHelp';
+import MapPicker from './MapPicker';
 
 export default function CheckIn({ user }: { user: User }) {
   const [territories, setTerritories] = useState<Territory[]>(user.territories ?? []);
@@ -9,14 +11,17 @@ export default function CheckIn({ user }: { user: User }) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
   const [gpsBusy, setGpsBusy] = useState(false);
+  const [geoDenied, setGeoDenied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<AttendanceResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Yuklangan rasm: yuborish xato bo'lib qayta urinilganda rasm ikkinchi marta yuklanmaydi
+  const uploaded = useRef<{ file: File; url: string } | null>(null);
 
   // Admin uchun /me da biriktirilgan hududlar bo'lmasligi mumkin — to'liq ro'yxatni olamiz
   useEffect(() => {
-    api.territories().then(setTerritories).catch((e) => setError(e.message));
+    api.territories().then((l) => setTerritories(l.filter((t) => t.isActive !== false))).catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => {
@@ -37,10 +42,12 @@ export default function CheckIn({ user }: { user: User }) {
   async function locate() {
     setGpsBusy(true);
     setError('');
+    setGeoDenied(false);
     try {
       setPos(await getPosition());
     } catch (e) {
       setError((e as Error).message);
+      setGeoDenied(e instanceof GeoError && e.denied);
     } finally {
       setGpsBusy(false);
     }
@@ -53,8 +60,11 @@ export default function CheckIn({ user }: { user: User }) {
     try {
       let photoUrl: string | undefined;
       if (photo) {
-        const blob = await compressImage(photo).catch(() => photo);
-        photoUrl = (await api.upload(blob)).url;
+        if (uploaded.current?.file !== photo) {
+          const blob = await compressImage(photo).catch(() => photo);
+          uploaded.current = { file: photo, url: (await api.upload(blob)).url };
+        }
+        photoUrl = uploaded.current.url;
       }
       setResult(
         await api.setAttendance({
@@ -67,6 +77,7 @@ export default function CheckIn({ user }: { user: User }) {
       );
       setPhoto(null);
       setPos(null);
+      uploaded.current = null;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -78,13 +89,13 @@ export default function CheckIn({ user }: { user: User }) {
     return (
       <div className="card">
         <div className={`alert ${result.withinZone ? 'ok' : 'warn'}`}>
-          <strong>{result.withinZone ? '✓ Davomat qabul qilindi' : '⚠ Hudud tashqarisida'}</strong>
+          <strong>{result.withinZone ? '✓ Belgilandi' : '⚠ Belgilandi — hudud tashqarisida'}</strong>
           <div>{result.message}</div>
         </div>
         <p className="muted">
           {result.territory.name} · masofa {result.distanceM} m · ruxsat {result.territory.radiusM} m
         </p>
-        <button className="primary" onClick={() => setResult(null)}>Yangi davomat</button>
+        <button className="primary" onClick={() => setResult(null)}>Yangi belgilash</button>
       </div>
     );
   }
@@ -108,11 +119,21 @@ export default function CheckIn({ user }: { user: User }) {
       </label>
       {territory?.address && <div className="muted small">{territory.address}</div>}
 
+      {territory && (
+        <MapPicker
+          value={{ latitude: territory.latitude, longitude: territory.longitude }}
+          radiusM={territory.radiusM}
+          me={pos}
+          height={200}
+        />
+      )}
+
       <div className="step">
         <button onClick={locate} disabled={gpsBusy}>{gpsBusy ? 'Aniqlanmoqda…' : pos ? 'GPS ni yangilash' : 'Joylashuvni aniqlash'}</button>
         {pos && (
           <div className="small">
             {pos.latitude.toFixed(5)}, {pos.longitude.toFixed(5)} · aniqlik ±{Math.round(pos.accuracy)} m
+            {pos.accuracy > 100 && <div className="warnText">GPS aniqligi past — ochiq joyga chiqib yangilang</div>}
             {approxDist !== null && territory && (
               <div className={approxDist <= territory.radiusM ? 'okText' : 'warnText'}>
                 Hududgacha ≈ {approxDist} m {approxDist <= territory.radiusM ? '(ichkarida)' : '(tashqarida)'}
@@ -121,6 +142,7 @@ export default function CheckIn({ user }: { user: User }) {
           </div>
         )}
       </div>
+      {geoDenied && <GeoHelp />}
 
       <div className="step">
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
@@ -130,8 +152,8 @@ export default function CheckIn({ user }: { user: User }) {
 
       {error && <div className="alert err">{error}</div>}
 
-      <button className="primary" disabled={!territory || !pos || busy} onClick={submit}>
-        {busy ? 'Yuborilmoqda…' : 'Davomatni yuborish'}
+      <button className="primary big" disabled={!territory || !pos || busy} onClick={submit}>
+        {busy ? 'Yuborilmoqda…' : error && pos ? 'Qayta urinish' : 'Belgilash'}
       </button>
     </div>
   );
