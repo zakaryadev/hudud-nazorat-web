@@ -6,7 +6,6 @@ import { AdminNavItem, AdminShell } from './components/admin';
 import { ToastProvider } from './components/Toast';
 import Login from './pages/Login';
 import Home from './pages/Home';
-import CheckIn from './pages/CheckIn';
 import History from './pages/History';
 import Report from './pages/Report';
 import Profile from './pages/Profile';
@@ -15,11 +14,11 @@ import Journal from './pages/Journal';
 import Zones from './pages/Zones';
 import Staff from './pages/Staff';
 
-type Route = 'home' | 'checkin' | 'history' | 'profile' | 'report' | 'panel' | 'journal' | 'zones' | 'staff' | 'orgReports';
+type Route = 'home' | 'history' | 'profile' | 'report' | 'panel' | 'journal' | 'zones' | 'staff' | 'orgReports';
 
 const EMPLOYEE_NAV: NavItem[] = [
   { key: 'home', icon: 'home', label: 'Bosh' },
-  { key: 'checkin', icon: 'pin', label: 'Belgilash' },
+  { key: 'report', icon: 'doc', label: 'Hisobot' },
   { key: 'history', icon: 'history', label: 'Tarix' },
   { key: 'profile', icon: 'user', label: 'Profil' },
 ];
@@ -81,20 +80,14 @@ export default function App() {
     );
   }
 
-  // Tabs: "Hisobot" ichki sahifasi "Tarix" ostida yonadi
-  const active = route === 'report' ? 'history' : route;
-  const back = route === 'report' ? () => { setHistKind('rec'); go('history'); } : () => go('home');
-  const sub = !EMPLOYEE_NAV.some((n) => n.key === route);
-
   return (
     <div className="shell">
       <ToastProvider>
-        {route === 'home' && <Home user={user} go={go} />}
-        {route === 'checkin' && <CheckIn user={user} onBack={() => go('home')} onDone={() => go('home')} />}
-        {route === 'history' && <History kind={histKind} setKind={setHistKind} onBack={sub ? back : undefined} onNewReport={() => go('report')} />}
-        {route === 'report' && <Report user={user} onBack={back} onDone={() => { setHistKind('rec'); go('history'); }} />}
-        {route === 'profile' && <Profile user={user} onLogout={logout} onBack={sub ? back : undefined} />}
-        <NavBar items={EMPLOYEE_NAV} active={active} onSelect={go} />
+        {route === 'home' && <Home user={user} onChanged={() => api.me().then(setUser).catch(() => {})} />}
+        {route === 'history' && <History kind={histKind} setKind={setHistKind} onNewReport={() => go('report')} />}
+        {route === 'report' && <Report user={user} onBack={() => go('home')} onDone={() => { setHistKind('rec'); go('history'); }} />}
+        {route === 'profile' && <Profile user={user} onLogout={logout} />}
+        <NavBar items={EMPLOYEE_NAV} active={route} onSelect={go} />
       </ToastProvider>
     </div>
   );

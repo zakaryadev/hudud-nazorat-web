@@ -228,6 +228,33 @@ input[type=range] { width: 100%; accent-color: var(--primary); }
 .login form { display: flex; flex-direction: column; gap: 20px; }
 .loading { height: 100%; display: grid; place-items: center; color: var(--on-surface-variant); }
 
+/* ---------- xodim bosh ekrani: ish vaqti, xarita, belgilash tugmasi ---------- */
+.greet { display: flex; align-items: center; gap: 12px; }
+.greet .av { width: 44px; height: 44px; border-radius: 22px; background: var(--primary); color: var(--on-primary); font-size: 18px; }
+.greet h1 { font-size: 20px; line-height: 26px; font-weight: 500; }
+.clock { background: var(--side-card, color-mix(in srgb, var(--primary) 28%, black)); color: white; border-radius: 28px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.clock .row { font-size: 14px; opacity: .85; }
+.clock .lbl { display: inline-flex; align-items: center; gap: 6px; }
+.clock .lbl .i { width: 16px; height: 16px; }
+.clock .time { font-size: 60px; line-height: 68px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.clock .time small { font-size: 28px; opacity: .55; margin-left: 2px; }
+.chips2 { display: flex; gap: 8px; flex-wrap: wrap; }
+.chips2 span, .chips2 button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; background: color-mix(in srgb, white 14%, transparent); font-size: 13px; font-weight: 500; }
+.chips2 .i { width: 16px; height: 16px; }
+.mapcard { position: relative; height: min(36vh, 340px); min-height: 200px; border-radius: 28px; overflow: hidden; flex: none; z-index: 0; }
+.mchip { position: absolute; bottom: 12px; z-index: 500; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; background: var(--surface); color: var(--on-surface); font-size: 13px; font-weight: 500; box-shadow: var(--shadow); max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mchip.l { left: 12px; } .mchip.r { right: 12px; } .mchip.warn { background: var(--warn-container); color: var(--on-warn-container); }
+.mchip .i { width: 16px; height: 16px; flex: none; }
+.mark { width: 100%; min-height: 72px; border-radius: 36px; padding: 10px 12px 10px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--primary); color: var(--on-primary); flex: none; }
+.mark div { display: flex; flex-direction: column; text-align: left; }
+.mark b { font-size: 18px; line-height: 26px; font-weight: 500; }
+.mark span { font-size: 13px; opacity: .85; }
+.mark i { width: 52px; height: 52px; border-radius: 26px; background: var(--surface); color: var(--primary); display: grid; place-items: center; flex: none; }
+.mark.ok { background: var(--ok); color: white; } .mark.ok i { color: var(--ok); }
+.mark.warn { background: var(--warn); color: white; } .mark.warn i { color: var(--warn); }
+.mark:disabled { opacity: .5; }
+.hint { text-align: center; font-size: 13px; margin-top: -6px; }
+
 /* ---------- admin (kompyuter): yon menyu, jadval, sahifalash ---------- */
 .adm-root { height: 100%; }
 .adm { --side: color-mix(in srgb, var(--primary) 24%, black); --on-side: white; height: 100%; display: flex; background: var(--sc-low); }
