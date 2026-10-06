@@ -358,5 +358,6 @@ input[type=range] { width: 100%; accent-color: var(--primary); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); } }
 :root[data-theme="dark"] .map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }
 .leaflet-control-attribution { font-size: 10px !important; }
+.leaflet-control-attribution svg { display: none !important; } /* standart prefiksdagi bayroq */
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
