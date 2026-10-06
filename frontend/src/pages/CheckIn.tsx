@@ -7,6 +7,7 @@ import MapView from '../components/MapView';
 import { GeoHelp, PhotoRow } from '../components/Parts';
 import { SelectField } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { fmtTime } from '../lib/date';
 
 export default function CheckIn({ user, onBack, onDone }: { user: User; onBack: () => void; onDone: () => void }) {
   const toast = useToast();
@@ -65,8 +66,12 @@ export default function CheckIn({ user, onBack, onDone }: { user: User; onBack: 
         <div className="big">
           {ok ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : <Icon name="warn" className="" />}
         </div>
-        <h2>{ok ? 'Belgilandi' : 'Belgilandi, lekin hudud tashqarisida'}</h2>
-        <p>{result.territory.name} · hududdan {result.distanceM} m<br />ruxsat etilgan masofa {result.territory.radiusM} m</p>
+        <h2>{result.alreadyMarked ? 'Bugun allaqachon belgilangan' : ok ? 'Belgilandi' : 'Hududda emassiz'}</h2>
+        <p>
+          {result.alreadyMarked
+            ? <>{result.territory.name} · {fmtTime(result.checkInAt)}<br />Birinchi muvaffaqiyatli belgilash saqlangan</>
+            : <>{result.territory.name} · hududdan {result.distanceM} m<br />ruxsat etilgan masofa {result.territory.radiusM} m</>}
+        </p>
         <button className="btn fill big sl" style={{ marginTop: 16 }} onClick={onDone}>Tayyor</button>
       </div>
     );
@@ -80,7 +85,7 @@ export default function CheckIn({ user, onBack, onDone }: { user: User; onBack: 
         <MapView value={territory ? { latitude: territory.latitude, longitude: territory.longitude } : null} radiusM={territory?.radiusM ?? 100} me={pos} height="100%" />
         {dist !== null && territory && (
           <span className={`tag float ${inside ? 'ok' : 'warn'}`}>
-            <Icon name={inside ? 'check' : 'warn'} />Hududgacha ≈ {dist} m, {inside ? 'ichkarida' : 'tashqarida'}
+            <Icon name={inside ? 'check' : 'warn'} />Hududgacha ≈ {dist} m, {inside ? 'hududda' : 'hududda emas'}
           </span>
         )}
       </div>

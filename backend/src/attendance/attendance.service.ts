@@ -26,29 +26,55 @@ export class AttendanceService {
     );
     const withinZone = distanceM <= territory.radiusM;
 
-    const att = await this.prisma.attendance.create({
-      data: {
-        userId: user.userId,
-        territoryId: territory.id,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        accuracy: dto.accuracy,
-        distanceM: Math.round(distanceM),
-        withinZone,
-        photoUrl: dto.photoUrl,
-      },
-    });
+    // Kuniga faqat birinchi muvaffaqiyatli (hudud ichidagi) belgilash saqlanadi.
+    // Xodim qayta bossa — yangi yozuv yaratilmaydi, mavjud yozuv qaytariladi.
+    // Ketma-ket ikki so'rov poygasiga qarshi foydalanuvchi bo'yicha advisory lock.
+    const { start, end } = dayRange(today());
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${user.userId}))`;
 
-    return {
-      id: att.id,
-      checkInAt: att.checkInAt,
-      distanceM: att.distanceM,
-      withinZone: att.withinZone,
-      territory: { id: territory.id, name: territory.name, radiusM: territory.radiusM },
-      message: withinZone
-        ? 'Davomat belgilandi — hudud ichidasiz'
-        : `Diqqat: hududdan ${att.distanceM} m uzoqdasiz (ruxsat: ${territory.radiusM} m)`,
-    };
+      const first = await tx.attendance.findFirst({
+        where: { userId: user.userId, withinZone: true, checkInAt: { gte: start, lt: end } },
+        orderBy: { checkInAt: 'asc' },
+        include: { territory: { select: { id: true, name: true, radiusM: true } } },
+      });
+      if (first) {
+        return {
+          id: first.id,
+          checkInAt: first.checkInAt,
+          distanceM: first.distanceM,
+          withinZone: true,
+          alreadyMarked: true,
+          territory: first.territory,
+          message: 'Bugun davomat allaqachon belgilangan',
+        };
+      }
+
+      const att = await tx.attendance.create({
+        data: {
+          userId: user.userId,
+          territoryId: territory.id,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          accuracy: dto.accuracy,
+          distanceM: Math.round(distanceM),
+          withinZone,
+          photoUrl: dto.photoUrl,
+        },
+      });
+
+      return {
+        id: att.id,
+        checkInAt: att.checkInAt,
+        distanceM: att.distanceM,
+        withinZone: att.withinZone,
+        alreadyMarked: false,
+        territory: { id: territory.id, name: territory.name, radiusM: territory.radiusM },
+        message: withinZone
+          ? 'Davomat belgilandi — hududdasiz'
+          : `Diqqat: hududdan ${att.distanceM} m uzoqdasiz (ruxsat: ${territory.radiusM} m)`,
+      };
+    });
   }
 
   async myList(user: JwtUser, limit = 50) {

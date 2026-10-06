@@ -28,7 +28,8 @@ export default function MapView({ value, radiusM, onChange, me, height = 260, ro
   const readOnly = !onChange;
 
   useEffect(() => {
-    const m = L.map(el.current!, { zoomControl: false, attributionControl: true }).setView(DEFAULT_CENTER, 12);
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: false }).setView(DEFAULT_CENTER, 12);
+    L.control.attribution({ prefix: false }).addTo(m);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(m);
     if (!readOnly) m.on('click', (e) => cb.current?.({ latitude: e.latlng.lat, longitude: e.latlng.lng }));
     map.current = m;

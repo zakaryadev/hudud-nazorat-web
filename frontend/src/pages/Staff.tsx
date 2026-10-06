@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { api, OrgUser } from '../lib/api';
 import { useLoad } from '../lib/hooks';
-import { Avatar, EmptyState, Fab, Field, ListItem, Segmented, Sheet, Skeleton, Switch, Tag, TopBar } from '../components/ui';
-import { LoadError } from '../components/Parts';
+import Icon from '../components/Icon';
+import { Avatar, Field, Segmented, Sheet, Switch, Tag } from '../components/ui';
+import { Col, DataTable, FilterSelect, matches, PageHead, PrimaryButton, SearchBar } from '../components/admin';
 import { useToast } from '../components/Toast';
 
 function NewUserSheet({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
@@ -78,7 +79,14 @@ export default function Staff({ meId }: { meId: string }) {
   const q = useLoad(() => api.users(), []);
   const [add, setAdd] = useState(false);
   const [sel, setSel] = useState<OrgUser | null>(null);
+  const [text, setText] = useState('');
+  const [role, setRole] = useState('');
+  const [st, setSt] = useState('');
   const list = q.data ?? [];
+  const rows = useMemo(
+    () => list.filter((u) => (!role || u.role === role) && (!st || (st === 'on') === u.isActive) && matches(text, u.fullName, u.phone)),
+    [list, text, role, st],
+  );
 
   async function setActive(u: OrgUser, v: boolean) {
     q.setData((d) => d && d.map((x) => (x.id === u.id ? { ...x, isActive: v } : x))); // darhol ko'rsatamiz
@@ -91,24 +99,24 @@ export default function Staff({ meId }: { meId: string }) {
     }
   }
 
+  const cols: Col<OrgUser>[] = [
+    { key: 'n', head: 'F.I.Sh', cell: (u) => <div className="who" style={{ opacity: u.isActive ? 1 : 0.55 }}><Avatar text={u.fullName} tone={u.role === 'ADMIN' ? '' : 't2'} size={32} />{u.fullName}</div> },
+    { key: 'p', head: 'Telefon', width: '190px', cell: (u) => u.phone },
+    { key: 'r', head: 'Rol', width: '160px', cell: (u) => <Tag tone={u.role === 'ADMIN' ? '' : 'neutral'}>{u.role === 'ADMIN' ? 'Administrator' : 'Xodim'}</Tag> },
+    { key: 'a', head: 'Faol', width: '100px', cell: (u) => <span onClick={(e) => e.stopPropagation()}><Switch on={u.isActive} disabled={u.id === meId} onChange={(v) => setActive(u, v)} label={`${u.fullName}: faol`} /></span> },
+    { key: 'ac', head: '', width: '56px', align: 'right', cell: (u) => <button className="ib sl" aria-label={`${u.fullName}: tafsilot`} onClick={(e) => { e.stopPropagation(); setSel(u); }}><Icon name="edit" /></button> },
+  ];
+
   return (
     <>
-      <TopBar title="Xodimlar" sub={q.data ? `${list.length} ta xodim` : undefined} />
-      <div className="scroll">
-        {q.error ? <LoadError message={q.error} onRetry={q.reload} /> : q.loading && !q.data ? <Skeleton rows={4} /> :
-          !list.length ? <EmptyState icon="group" title="Xodimlar yo‘q" hint="“+” tugmasi bilan xodim qo‘shing" /> : (
-            <div className="card list">
-              {list.map((u) => (
-                <ListItem key={u.id} onClick={() => setSel(u)}
-                  lead={<div style={{ opacity: u.isActive ? 1 : 0.5 }}><Avatar text={u.fullName} tone={u.role === 'ADMIN' ? '' : 't2'} /></div>}
-                  title={<span style={{ opacity: u.isActive ? 1 : 0.6 }}>{u.fullName}</span>}
-                  sub={`${u.role === 'ADMIN' ? 'Administrator' : 'Xodim'} · ${u.isActive ? 'faol' : 'nofaol'}`}
-                  trail={<span onClick={(e) => e.stopPropagation()}><Switch on={u.isActive} disabled={u.id === meId} onChange={(v) => setActive(u, v)} label={`${u.fullName}: faol`} /></span>} />
-              ))}
-            </div>
-          )}
-      </div>
-      <Fab icon="add" label="Xodim qo‘shish" onClick={() => setAdd(true)} />
+      <PageHead title="Xodimlar" sub={<>Jami topildi: <b>{rows.length}</b> ta</>} actions={<PrimaryButton icon="add" onClick={() => setAdd(true)}>Xodim qo‘shish</PrimaryButton>} />
+      <SearchBar value={text} onSubmit={setText} placeholder="F.I.Sh yoki telefon" activeFilters={(role ? 1 : 0) + (st ? 1 : 0)}
+        filters={<>
+          <FilterSelect label="Rol" value={role} onChange={setRole} options={[{ value: '', label: 'Barchasi' }, { value: 'EMPLOYEE', label: 'Xodim' }, { value: 'ADMIN', label: 'Administrator' }]} />
+          <FilterSelect label="Holat" value={st} onChange={setSt} options={[{ value: '', label: 'Barchasi' }, { value: 'on', label: 'Faol' }, { value: 'off', label: 'Nofaol' }]} />
+        </>} />
+      <DataTable cols={cols} rows={rows} rowKey={(u) => u.id} onRow={setSel} loading={q.loading} error={q.error} onRetry={q.reload}
+        empty={{ icon: 'group', title: 'Xodimlar yo‘q', hint: '“Xodim qo‘shish” tugmasi bilan xodim qo‘shing' }} />
       <NewUserSheet open={add} onClose={() => setAdd(false)} onSaved={q.reload} />
       <UserSheet user={sel} onClose={() => setSel(null)} onSaved={q.reload} />
     </>

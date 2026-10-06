@@ -2,7 +2,8 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 
 describe('AttendanceService.setAttendance (FR-3.x)', () => {
-  const prisma = { attendance: { create: jest.fn() } };
+  const prisma: any = { attendance: { create: jest.fn(), findFirst: jest.fn() }, $executeRaw: jest.fn() };
+  prisma.$transaction = (fn: any) => fn(prisma);
   const territories = { assertAssigned: jest.fn() };
   const svc = new AttendanceService(prisma as any, territories as any);
   const user = { userId: 'u1', orgId: 'o1', role: 'EMPLOYEE' as const };
@@ -17,6 +18,7 @@ describe('AttendanceService.setAttendance (FR-3.x)', () => {
 
   beforeEach(() => {
     territories.assertAssigned.mockReset().mockResolvedValue(territory);
+    prisma.attendance.findFirst.mockReset().mockResolvedValue(null);
     prisma.attendance.create.mockReset().mockImplementation(async ({ data }) => ({
       id: 'a1',
       checkInAt: new Date('2026-10-05T08:00:00Z'),
@@ -49,5 +51,25 @@ describe('AttendanceService.setAttendance (FR-3.x)', () => {
     territories.assertAssigned.mockResolvedValue({ ...territory, isActive: false });
     await expect(svc.setAttendance(user, at(0))).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.attendance.create).not.toHaveBeenCalled();
+  });
+
+  it('kun ichida birinchi muvaffaqiyatli belgilash saqlanadi: qayta bosilsa yangi yozuv yaratilmaydi', async () => {
+    const firstAt = new Date('2026-10-05T04:00:00Z');
+    prisma.attendance.findFirst.mockResolvedValue({
+      id: 'first',
+      checkInAt: firstAt,
+      distanceM: 20,
+      withinZone: true,
+      territory: { id: 't1', name: 'Nukus', radiusM: 150 },
+    });
+    const r = await svc.setAttendance(user, at(10));
+    expect(r).toMatchObject({ id: 'first', checkInAt: firstAt, withinZone: true, alreadyMarked: true });
+    expect(prisma.attendance.create).not.toHaveBeenCalled();
+  });
+
+  it('muvaffaqiyatsiz (tashqarida) urinishlardan keyin hudud ichidagisi baribir saqlanadi', async () => {
+    const r = await svc.setAttendance(user, at(10));
+    expect(r.alreadyMarked).toBe(false);
+    expect(prisma.attendance.create).toHaveBeenCalledTimes(1);
   });
 });

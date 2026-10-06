@@ -19,7 +19,7 @@ export function AttendanceGroups({ items, admin, onOpen }: { items: AttendanceIt
                 title={admin && a.user ? a.user.fullName : a.territory.name}
                 sub={`${admin ? `${a.territory.name} · ` : ''}${fmtTime(a.checkInAt)} · ${a.distanceM} m${a.accuracy != null && a.accuracy > 100 ? ' · GPS aniqligi past' : ''}`}
                 subWarn={a.accuracy != null && a.accuracy > 100}
-                trail={<Tag tone={a.withinZone ? 'ok' : 'warn'}>{a.withinZone ? 'Ichkarida' : 'Tashqarida'}</Tag>}
+                trail={<Tag tone={a.withinZone ? 'ok' : 'warn'}>{a.withinZone ? 'Hududda' : 'Hududda emas'}</Tag>}
               />
             ))}
           </div>

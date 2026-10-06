@@ -11,7 +11,7 @@ export function AttendanceSheet({ item, onClose }: { item: AttendanceItem | null
         <>
           {item.photoUrl && <img className="photo-full" src={item.photoUrl} alt="Davomat rasmi" />}
           <dl className="detail">
-            <dt>Holat</dt><dd><Tag tone={item.withinZone ? 'ok' : 'warn'}>{item.withinZone ? 'Ichkarida' : 'Tashqarida'}</Tag></dd>
+            <dt>Holat</dt><dd><Tag tone={item.withinZone ? 'ok' : 'warn'}>{item.withinZone ? 'Hududda' : 'Hududda emas'}</Tag></dd>
             <dt>Hudud</dt><dd>{item.territory.name}</dd>
             <dt>Vaqt</dt><dd>{when(item.checkInAt)}</dd>
             <dt>Masofa</dt><dd>{item.distanceM} m</dd>

@@ -103,6 +103,7 @@ export interface ReportParams {
   to?: string;
   userId?: string;
   territoryId?: string;
+  limit?: string;
 }
 const qs = (p: ReportParams = {}) => {
   const s = new URLSearchParams();
@@ -116,6 +117,7 @@ export interface AttendanceResult {
   checkInAt: string;
   distanceM: number;
   withinZone: boolean;
+  alreadyMarked: boolean; // bugun birinchi muvaffaqiyatli belgilash allaqachon saqlangan
   territory: { id: string; name: string; radiusM: number };
   message: string;
 }

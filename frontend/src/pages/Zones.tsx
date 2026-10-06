@@ -1,29 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminTerritory, api, OrgUser } from '../lib/api';
 import { getPosition } from '../lib/geo';
 import { useLoad } from '../lib/hooks';
 import Icon from '../components/Icon';
 import MapView from '../components/MapView';
-import { Avatar, Chip, EmptyState, Fab, Field, Sheet, Skeleton, Switch, Tag, TopBar } from '../components/ui';
-import { LoadError } from '../components/Parts';
+import { Avatar, Chip, Field, Sheet, Switch, Tag } from '../components/ui';
+import { Cell2, Col, DataTable, FilterSelect, matches, PageHead, PrimaryButton, SearchBar } from '../components/admin';
 import { useToast } from '../components/Toast';
-
-/** Xaritasiz sxematik ko'rinish: radiusga mutanosib doira (ro'yxatda ko'p xarita yuklamaslik uchun) */
-function ZoneArt({ radiusM, active }: { radiusM: number; active: boolean }) {
-  const r = 14 + Math.sqrt(radiusM) * 1.3;
-  return (
-    <div className="zone-art" style={{ opacity: active ? 1 : 0.55 }}>
-      <svg viewBox="0 0 240 88" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <g stroke="var(--outline-variant)" strokeWidth="1" opacity=".6">
-          {[22, 44, 66].map((y) => <line key={y} x1="0" x2="240" y1={y} y2={y} />)}
-          {[40, 80, 120, 160, 200].map((x) => <line key={x} y1="0" y2="88" x1={x} x2={x} />)}
-        </g>
-        <circle cx="120" cy="44" r={r} fill="var(--primary)" fillOpacity=".16" stroke="var(--primary)" strokeWidth="2" />
-        <circle cx="120" cy="44" r="5" fill="var(--primary)" stroke="var(--surface)" strokeWidth="2.5" />
-      </svg>
-    </div>
-  );
-}
 
 function ZoneSheet({ zone, users, onClose, onSaved }: { zone: AdminTerritory | 'new' | null; users: OrgUser[]; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
@@ -101,29 +84,29 @@ export default function Zones() {
   const zones = useLoad(() => api.territories(), []);
   const users = useLoad(() => api.users(), []);
   const [sheet, setSheet] = useState<AdminTerritory | 'new' | null>(null);
+  const [text, setText] = useState('');
+  const [st, setSt] = useState('');
   const list = zones.data ?? [];
+  const rows = useMemo(() => list.filter((z) => (!st || (st === 'on') === (z.isActive !== false)) && matches(text, z.name, z.address)), [list, text, st]);
+
+  const cols: Col<AdminTerritory>[] = [
+    { key: 'name', head: 'Hudud nomi', cell: (z) => <Cell2 a={z.name} b={z.address} /> },
+    { key: 'r', head: 'Radius', width: '110px', cell: (z) => `${z.radiusM} m` },
+    { key: 'xy', head: 'Koordinatalar', width: '190px', cell: (z) => <span className="mono">{z.latitude.toFixed(5)}, {z.longitude.toFixed(5)}</span> },
+    { key: 'as', head: 'Xodimlar', width: '200px', cell: (z) => z.assignees?.length
+      ? <div className="who"><div className="stack">{z.assignees.slice(0, 4).map((a) => <Avatar key={a.id} text={a.fullName} tone="t2" />)}</div><span className="muted">{z.assignees.length} ta</span></div>
+      : <span className="muted">Biriktirilmagan</span> },
+    { key: 'st', head: 'Holat', width: '120px', cell: (z) => <Tag tone={z.isActive === false ? 'neutral' : 'ok'}>{z.isActive === false ? 'Faol emas' : 'Faol'}</Tag> },
+    { key: 'ac', head: '', width: '56px', align: 'right', cell: (z) => <button className="ib sl" aria-label={`${z.name}: tahrirlash`} onClick={(e) => { e.stopPropagation(); setSheet(z); }}><Icon name="edit" /></button> },
+  ];
 
   return (
     <>
-      <TopBar title="Hududlar" sub={zones.data ? `${list.length} ta hudud` : undefined} />
-      <div className="scroll">
-        {zones.error ? <LoadError message={zones.error} onRetry={zones.reload} /> : zones.loading && !zones.data ? <Skeleton rows={3} /> :
-          !list.length ? <EmptyState icon="pin" title="Hududlar yo‘q" hint="“+” tugmasi bilan birinchi hududni yarating" /> :
-          list.map((z) => (
-            <div className="card" key={z.id}>
-              <ZoneArt radiusM={z.radiusM} active={z.isActive !== false} />
-              <div className="zone-body">
-                <div className="row"><h4>{z.name}</h4>{z.isActive === false ? <Tag tone="neutral">Faol emas</Tag> : <Tag tone="ok">Faol</Tag>}</div>
-                <div className="muted">{z.address ? `${z.address} · ` : ''}{z.radiusM} m</div>
-                <div className="row">
-                  {z.assignees?.length ? <div className="stack">{z.assignees.slice(0, 4).map((a) => <Avatar key={a.id} text={a.fullName} tone="t2" />)}</div> : <span className="muted">Xodim biriktirilmagan</span>}
-                  <button className="btn text sl" onClick={() => setSheet(z)}><Icon name="edit" />Tahrirlash</button>
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
-      <Fab icon="add" label="Yangi hudud" onClick={() => setSheet('new')} />
+      <PageHead title="Hududlar" sub={<>Jami topildi: <b>{rows.length}</b> ta</>} actions={<PrimaryButton icon="add" onClick={() => setSheet('new')}>Hudud qo‘shish</PrimaryButton>} />
+      <SearchBar value={text} onSubmit={setText} placeholder="Hudud nomi yoki manzil" activeFilters={st ? 1 : 0}
+        filters={<FilterSelect label="Holat" value={st} onChange={setSt} options={[{ value: '', label: 'Barchasi' }, { value: 'on', label: 'Faol' }, { value: 'off', label: 'Faol emas' }]} />} />
+      <DataTable cols={cols} rows={rows} rowKey={(z) => z.id} onRow={setSheet} loading={zones.loading} error={zones.error} onRetry={zones.reload}
+        empty={{ icon: 'pin', title: 'Hududlar yo‘q', hint: '“Hudud qo‘shish” tugmasi bilan birinchi hududni yarating' }} />
       <ZoneSheet zone={sheet} users={users.data ?? []} onClose={() => setSheet(null)} onSaved={zones.reload} />
     </>
   );

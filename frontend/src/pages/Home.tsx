@@ -6,8 +6,8 @@ import { fmtTime, uzDate, ymd } from '../lib/date';
 import { useGeoPermission, useLoad } from '../lib/hooks';
 
 const HERO: Record<DayStatus, { cls: string; title: string; hint: string; ring: number }> = {
-  INSIDE: { cls: '', title: 'Bugun belgilangan', hint: 'Hudud ichida davomat qabul qilingan', ring: 1 },
-  OUTSIDE_ONLY: { cls: 'warn', title: 'Faqat hudud tashqarisida', hint: 'Hudud ichida qayta belgilang', ring: 0.5 },
+  INSIDE: { cls: '', title: 'Bugun belgilangan', hint: 'Davomat hududda qabul qilingan', ring: 1 },
+  OUTSIDE_ONLY: { cls: 'warn', title: 'Hududda emas', hint: 'Hududga borib qayta belgilang', ring: 0.5 },
   NONE: { cls: 'none', title: 'Bugun belgilanmagan', hint: 'Hududga borib davomatni belgilang', ring: 0 },
 };
 
@@ -42,7 +42,7 @@ export default function Home({ user, go }: { user: User; go: (route: string) => 
               <div className="it" key={a.id}>
                 <span className="tm">{fmtTime(a.checkInAt)}</span>
                 <i className={`dot ${a.withinZone ? '' : 'w'}`} />
-                <div><b>{a.territory.name}</b><div className="s">{a.withinZone ? 'Ichkarida' : 'Tashqarida'} · {a.distanceM} m</div></div>
+                <div><b>{a.territory.name}</b><div className="s">{a.withinZone ? 'Hududda' : 'Hududda emas'} · {a.distanceM} m</div></div>
               </div>
             ))}
           </div>
